@@ -1,0 +1,39 @@
+ name: Build Code.ipa
+    on:
+      workflow_dispatch:
+
+    jobs:
+      build:
+        name: Build IPA
+        runs-on: macos-latest
+
+        steps:
+          - name: Checkout repository
+            uses: actions/checkout@v3
+
+          - name: Download Frameworks
+            run: |
+              chmod +x ./downloadFrameworks.sh
+              ./downloadFrameworks.sh
+
+          - name: Build IPA
+            run: |
+              xcodebuild clean build \
+                -project Code.xcodeproj \
+                -scheme Code \
+                -configuration Release \
+                -sdk iphoneos \
+                CODE_SIGNING_ALLOWED=NO \
+                CODE_SIGNING_REQUIRED=NO \
+                CODE_SIGN_IDENTITY="" \
+                AD_HOC_CODE_SIGNING_ALLOWED=YES
+
+              mkdir -p Payload
+              cp -r build/Release-iphoneos/Code.app Payload/
+              zip -r Code.ipa Payload
+
+          - name: Upload IPA Artifact
+            uses: actions/upload-artifact@v4
+            with:
+              name: Code-App-IPA
+              path: Code.ipa
