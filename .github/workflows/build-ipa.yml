@@ -1,35 +1,46 @@
- name: Build Code.ipa
-    on:
+ name: Build Code IPA
+
+ on:
       workflow_dispatch:
+      push:
+        branches:
+          - main
 
     jobs:
       build:
         name: Build IPA
-        runs-on: macos-latest
+        runs-on: macos-14
 
         steps:
           - name: Checkout repository
-            uses: actions/checkout@v3
+            uses: actions/checkout@v4
+
+          - name: Select Xcode 15
+            run: sudo xcode-select -s /Applications/Xcode_15.4.app
 
           - name: Download Frameworks
             run: |
               chmod +x ./downloadFrameworks.sh
               ./downloadFrameworks.sh
 
-          - name: Build IPA
+          - name: Build App
             run: |
               xcodebuild clean build \
                 -project Code.xcodeproj \
                 -scheme Code \
                 -configuration Release \
                 -sdk iphoneos \
+                -derivedDataPath derived_data \
                 CODE_SIGNING_ALLOWED=NO \
                 CODE_SIGNING_REQUIRED=NO \
                 CODE_SIGN_IDENTITY="" \
                 AD_HOC_CODE_SIGNING_ALLOWED=YES
 
+          - name: Package IPA
+            run: |
               mkdir -p Payload
-              cp -r build/Release-iphoneos/Code.app Payload/
+              APP_PATH=$(find derived_data -name "Code.app" -type d | head -n 1)
+              cp -r "$APP_PATH" Payload/
               zip -r Code.ipa Payload
 
           - name: Upload IPA Artifact
